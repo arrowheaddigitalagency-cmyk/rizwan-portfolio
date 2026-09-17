@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+.sites-runtime/
+*.tsbuildinfo
+*.log
+.env*
+!\.env.example
+*.docx
+biography-source.txt
+IMG_1905.JPG.jpeg
+
+document-portrait.jpeg
+site-package.zip
+.next-dev/
