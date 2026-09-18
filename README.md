@@ -52,3 +52,7 @@ Broader editorial/storytelling research:
 - https://assets.awwwards.com/awards/gallery/2023/07/HOT-RIGHT-NOW-BOOK-2023.pdf
 
 The design is original and does not reuse reference website code, branding, layouts or assets.
+
+---
+
+**Delivered by Arrowhead Digital Agency — CMYK**
