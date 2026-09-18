@@ -1,0 +1,2 @@
+const sharp=require('sharp');
+(async()=>{const url='https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Doha_West_Bay_Skyline_Qatar_Jan_2020.jpg/1280px-Doha_West_Bay_Skyline_Qatar_Jan_2020.jpg';const res=await fetch(url,{signal:AbortSignal.timeout(30000)});console.log('Qatar',res.status);if(!res.ok)process.exit(1);await sharp(Buffer.from(await res.arrayBuffer())).webp({quality:86}).toFile('public/cinematic/qatar.webp')})();
