@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import gsap from 'gsap';
@@ -12,6 +13,7 @@ import './cinematic.css';
 const GlobalEarth = dynamic(() => import('./GlobalEarth'), { ssr: false, loading: () => <div className="earth-fallback"/> });
 const navItems = [['opening','Home'],['journey','Journey'],['businesses','Businesses'],['yalaride','YalaRide'],['leadership','Leadership'],['contact','Contact']] as const;
 const Arrow = () => <span aria-hidden="true">↗</span>;
+type BusinessChapter = (typeof businessChapters)[number];
 
 export default function CinematicPortfolio() {
   const root = useRef<HTMLDivElement>(null);
@@ -24,6 +26,22 @@ export default function CinematicPortfolio() {
   const globe = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [globeReady, setGlobeReady] = useState(false);
+  const [activeStory, setActiveStory] = useState<BusinessChapter | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
+
+  useEffect(() => { setPortalReady(true); }, []);
+
+  useEffect(() => {
+    if (!activeStory) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActiveStory(null); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [activeStory]);
 
   useLayoutEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -51,34 +69,66 @@ export default function CinematicPortfolio() {
         return()=>{stage.classList.remove('has-door-motion');hero.inert=false;opening.inert=false;};
       });
       mm.add('(min-width: 1000px) and (min-height: 650px) and (prefers-reduced-motion: no-preference)', () => {
-        gsap.utils.toArray<HTMLElement>('.journey-scene').forEach((scene,i) => {
+        gsap.utils.toArray<HTMLElement>('.journey-scene').forEach((scene) => {
+          const photo=scene.querySelector('.scene-photo');
           const tl=gsap.timeline({scrollTrigger:{trigger:scene,start:'top top',end:'+=45%',pin:true,scrub:.8,anticipatePin:1}});
-          tl.fromTo(scene.querySelector('.scene-photo'),{scale:1.12},{scale:1.01,xPercent:i===1?-2:0,duration:1,ease:'none'},0)
-            .to(scene.querySelector('.country-name'),{yPercent:-12,duration:1,ease:'none'},0);
+          // Keep journey photos covering the frame — no side gap (esp. Qatar)
+          if(photo)tl.fromTo(photo,{scale:1.14},{scale:1.08,duration:1,ease:'none'},0);
+          tl.to(scene.querySelector('.country-name'),{yPercent:-10,duration:1,ease:'none'},0);
         });
         gsap.utils.toArray<HTMLElement>('.business-chapter, .business-overture').forEach((scene,i) => {
           const photo=scene.querySelector('.scene-photo');
           const title=scene.querySelector('.scene-title');
-          const tl=gsap.timeline({scrollTrigger:{trigger:scene,start:'top top',end:scene.classList.contains('business-travel')?'+=35%':i===0?'+=45%':'+=60%',pin:true,scrub:.85,anticipatePin:1}});
-          tl.fromTo(photo,{scale:i===3?1.025:1.1},{scale:1,duration:1,ease:'none'},0)
-            .fromTo(title,{yPercent:5},{yPercent:-6,duration:1,ease:'none'},0);
-          if(i===2)tl.to(photo,{xPercent:3,duration:1,ease:'none'},0);
-          const frame=scene.querySelector('.business-image');
-          if(frame)gsap.fromTo(frame,{clipPath:i%2?'inset(0% 0% 0% 13%)':'inset(9% 0% 9% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'none',scrollTrigger:{trigger:scene,start:'top 85%',end:'top top',scrub:.7}});
-          gsap.fromTo(title,{clipPath:'inset(100% 0% 0% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'none',scrollTrigger:{trigger:scene,start:'top 85%',end:'top 20%',scrub:.5}});
-          if(i===4)tl.fromTo(photo,{clipPath:'inset(8% 0% 8% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',duration:.75,ease:'none'},0);
+          const tl=gsap.timeline({scrollTrigger:{trigger:scene,start:'top top',end:scene.classList.contains('business-travel')?'+=35%':i===0?'+=45%':'+=55%',pin:true,scrub:.85,anticipatePin:1}});
+          // Full-bleed chapters: gentle Ken Burns only, never shrink below cover
+          if(photo)tl.fromTo(photo,{scale:1.08},{scale:1.04,duration:1,ease:'none'},0);
+          if(title)tl.fromTo(title,{yPercent:3},{yPercent:-3,duration:1,ease:'none'},0);
+          if(title)gsap.fromTo(title,{clipPath:'inset(100% 0% 0% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'none',scrollTrigger:{trigger:scene,start:'top 85%',end:'top 20%',scrub:.5}});
         });
-        const technology=gsap.timeline({scrollTrigger:{trigger:'.technology-scene',start:'top top',end:'+=85%',pin:true,scrub:1,anticipatePin:1}});
-        technology.fromTo('.device-composition',{rotateY:-13,rotateZ:6,y:55,scale:.86},{rotateY:0,rotateZ:-6,y:-10,scale:1,duration:.75,ease:'none'},0)
+        const technology=gsap.timeline({scrollTrigger:{trigger:'.technology-scene',start:'top top',end:'+=75%',pin:true,scrub:1,anticipatePin:1}});
+        technology.fromTo('.device-composition--phone',{y:28,scale:.96,opacity:.7},{y:0,scale:1,opacity:1,duration:.75,ease:'none'},0)
           .fromTo('.technology-wordmark',{xPercent:5},{xPercent:0,opacity:1,duration:.8},0)
           .fromTo('.marketplace-relation',{y:25},{y:0,opacity:1,duration:.4},.45);
-        gsap.fromTo('.global-earth',{scale:1.12,rotate:-7},{scale:1,rotate:0,ease:'none',scrollTrigger:{trigger:'.global-scene',start:'top bottom',end:'bottom top',scrub:1}});
         gsap.to('.leadership-portrait',{yPercent:-4,ease:'none',scrollTrigger:{trigger:'.leadership-scene',start:'top bottom',end:'bottom top',scrub:1}});
       });
       mm.add('(max-width: 999px) and (prefers-reduced-motion: no-preference)', () => {
-        gsap.utils.toArray<HTMLElement>('.scene-copy, .journey-copy, .global-copy').forEach(copy=>{
-          gsap.fromTo(copy,{y:20},{y:0,opacity:1,duration:.7,ease:'power2.out',scrollTrigger:{trigger:copy,start:'top 94%',once:true}});
+        gsap.utils.toArray<HTMLElement>('.journey-scene').forEach((scene) => {
+          const photo=scene.querySelector('.scene-photo');
+          const frame=scene.querySelector('.journey-image');
+          if(photo)gsap.fromTo(photo,{scale:1.16},{scale:1.05,ease:'none',scrollTrigger:{trigger:scene,start:'top 90%',end:'top 10%',scrub:.85}});
+          if(frame)gsap.fromTo(frame,{clipPath:'inset(8% 6% 8% 6%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'power1.out',scrollTrigger:{trigger:scene,start:'top 92%',end:'top 48%',scrub:.65}});
+          gsap.to(scene.querySelector('.country-name'),{yPercent:-8,ease:'none',scrollTrigger:{trigger:scene,start:'top 80%',end:'top 10%',scrub:.8}});
+          const journeyText=scene.querySelectorAll('.film-kicker, .journey-prologue, .country-name, h3, .scene-body, .journey-coordinate');
+          gsap.fromTo(journeyText,{y:36,opacity:0},{y:0,opacity:1,stagger:.09,duration:.85,ease:'power3.out',scrollTrigger:{trigger:scene,start:'top 84%',once:true}});
         });
+        gsap.utils.toArray<HTMLElement>('.business-overture').forEach(scene=>{
+          const bits=scene.querySelectorAll('.film-kicker, .scene-title, .overture-content > p:not(.film-kicker), .film-text-button');
+          gsap.fromTo(bits,{y:34,opacity:0},{y:0,opacity:1,stagger:.1,duration:.85,ease:'power3.out',scrollTrigger:{trigger:scene,start:'top 82%',once:true}});
+          const ovPhoto=scene.querySelector('.scene-photo');
+          if(ovPhoto)gsap.fromTo(ovPhoto,{scale:1.12},{scale:1.02,ease:'none',scrollTrigger:{trigger:scene,start:'top 90%',end:'top 20%',scrub:.75}});
+        });
+        gsap.utils.toArray<HTMLElement>('.business-chapter').forEach((scene) => {
+          const title=scene.querySelector('.scene-title');
+          const photo=scene.querySelector('.scene-photo');
+          const frame=scene.querySelector('.business-image');
+          if(frame)gsap.fromTo(frame,{clipPath:'inset(7% 4% 7% 4%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'power1.out',scrollTrigger:{trigger:scene,start:'top 94%',end:'top 50%',scrub:.65}});
+          if(photo)gsap.fromTo(photo,{scale:1.12},{scale:1.03,ease:'none',scrollTrigger:{trigger:scene,start:'top 92%',end:'top 18%',scrub:.75}});
+          if(title){
+            gsap.fromTo(title,{y:28,opacity:0},{y:0,opacity:1,duration:.8,ease:'power3.out',scrollTrigger:{trigger:scene,start:'top 78%',once:true}});
+            gsap.fromTo(title,{clipPath:'inset(100% 0% 0% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'power2.out',scrollTrigger:{trigger:scene,start:'top 86%',end:'top 52%',scrub:.45}});
+          }
+          const textBits=scene.querySelectorAll('.business-category, .business-lead, .scene-body, .chapter-story-trigger, .business-footline, .business-topline, .business-signature');
+          gsap.fromTo(textBits,{y:32,opacity:0},{y:0,opacity:1,stagger:.1,duration:.8,ease:'power3.out',scrollTrigger:{trigger:scene.querySelector('.scene-copy')||scene,start:'top 90%',once:true}});
+        });
+        gsap.fromTo('.device-composition--phone',{y:36,scale:.94,opacity:.4},{y:0,scale:1,opacity:1,ease:'power2.out',scrollTrigger:{trigger:'.technology-scene',start:'top 80%',end:'top 40%',scrub:.9}});
+        gsap.fromTo('.technology-wordmark',{y:30,opacity:0},{y:0,opacity:1,duration:.9,ease:'power3.out',scrollTrigger:{trigger:'.technology-scene',start:'top 78%',once:true}});
+        gsap.fromTo('.technology-intro, .technology-copy h3, .technology-copy .scene-body, .technology-build, .technology-copy .film-button',{y:28,opacity:0},{y:0,opacity:1,stagger:.08,duration:.75,ease:'power3.out',scrollTrigger:{trigger:'.technology-scene',start:'top 80%',once:true}});
+        gsap.fromTo('.marketplace-relation > *',{y:22,opacity:0},{y:0,opacity:1,stagger:.1,duration:.7,ease:'power2.out',scrollTrigger:{trigger:'.technology-scene',start:'top 55%',once:true}});
+        gsap.fromTo('.leadership-values h2, .leadership-quote, .leadership-label',{y:30,opacity:0},{y:0,opacity:1,stagger:.12,duration:.85,ease:'power3.out',scrollTrigger:{trigger:'.leadership-scene',start:'top 82%',once:true}});
+        gsap.fromTo('.leadership-portrait',{y:40,scale:1.06,opacity:.5},{y:0,scale:1,opacity:1,ease:'none',scrollTrigger:{trigger:'.leadership-scene',start:'top 85%',end:'top 25%',scrub:.8}});
+        gsap.fromTo('.global-copy > *',{y:28,opacity:0},{y:0,opacity:1,stagger:.1,duration:.8,ease:'power3.out',scrollTrigger:{trigger:'.global-scene',start:'top 85%',once:true}});
+        gsap.fromTo('.global-earth',{scale:1.12,opacity:.4},{scale:1,opacity:1,ease:'none',scrollTrigger:{trigger:'.global-scene',start:'top 90%',end:'top 40%',scrub:.7}});
+        gsap.fromTo('.finale-scene > *',{y:26,opacity:0},{y:0,opacity:1,stagger:.09,duration:.8,ease:'power3.out',scrollTrigger:{trigger:'.finale-scene',start:'top 85%',once:true}});
       });
     },el);
     let active=true;
@@ -91,11 +141,28 @@ export default function CinematicPortfolio() {
 
   useEffect(()=>{
     let raf=0;
-    const update=()=>{raf=0;const max=document.documentElement.scrollHeight-innerHeight;if(progress.current)progress.current.style.transform=`scaleX(${max>0?scrollY/max:0})`;};
+    let lastY=0;
+    const update=()=>{
+      raf=0;
+      const y=scrollY;
+      const max=document.documentElement.scrollHeight-innerHeight;
+      if(progress.current)progress.current.style.transform=`scaleX(${max>0?y/max:0})`;
+      if(header.current){
+        const hide=y>lastY&&y>90&&!header.current.classList.contains('menu-open');
+        header.current.classList.toggle('is-hidden',hide);
+        lastY=y;
+      }
+    };
     const schedule=()=>{if(!raf)raf=requestAnimationFrame(update);};
     const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){const scene=entry.target as HTMLElement;if(header.current)header.current.dataset.tone=scene.dataset.tone||'light';if(activeChapter.current)activeChapter.current.textContent=scene.dataset.chapter||'A life in motion';}});},{rootMargin:'-15% 0px -70% 0px'});
     document.querySelectorAll('[data-chapter]').forEach(scene=>observer.observe(scene));
-    const globeObserver=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting)){setGlobeReady(true);globeObserver.disconnect();}},{rootMargin:'1400px'});
+    const globeObserver=new IntersectionObserver(entries=>{
+      if(entries.some(x=>x.isIntersecting)){
+        const can3d=innerWidth>=1000&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(can3d)setGlobeReady(true);
+        globeObserver.disconnect();
+      }
+    },{rootMargin:'800px'});
     if(globe.current)globeObserver.observe(globe.current);
     addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule);update();
     return()=>{cancelAnimationFrame(raf);removeEventListener('scroll',schedule);removeEventListener('resize',schedule);observer.disconnect();globeObserver.disconnect();};
@@ -115,7 +182,7 @@ export default function CinematicPortfolio() {
   return <div ref={root} className="cinematic-site">
     <svg className="mask-definitions" aria-hidden="true"><defs><clipPath id="portrait-silhouette" clipPathUnits="objectBoundingBox"><path d="M.185 1 L.183 .92 Q.159 .89 .153 .85 L.13 .805 Q.105 .785 .10 .76 L.097 .704 Q.096 .68 .103 .655 L.113 .567 L.137 .496 L.149 .458 L.166 .396 Q.188 .384 .255 .363 L.390 .320 L.397 .302 Q.369 .282 .36 .252 Q.343 .249 .34 .223 L.337 .204 Q.334 .194 .347 .197 L.349 .176 Q.344 .15 .36 .122 Q.385 .093 .423 .084 Q.46 .071 .483 .082 Q.507 .072 .537 .089 Q.571 .093 .589 .133 Q.601 .16 .595 .196 Q.615 .191 .614 .211 Q.612 .237 .601 .25 L.59 .288 L.588 .302 L.64 .323 Q.695 .34 .764 .356 L.834 .375 Q.846 .401 .86 .45 L.887 .515 Q.915 .588 .935 .643 Q.95 .66 .95 .70 L.932 .778 L.909 .839 L.889 .906 L.892 1 Z"/></clipPath></defs></svg>
     <a className="film-skip" href="#main">Skip to content</a>
-    <header ref={header} className="film-header" data-tone="dark">
+    <header ref={header} className={`film-header${menuOpen?' menu-open':''}`} data-tone="dark">
       <a href="#opening" className="film-brand" aria-label="Mohammed Rizwan home"><Image src="/brand-mark.svg" width={45} height={34} alt=""/><span>MOHAMMED RIZWAN</span></a>
       <nav aria-label="Main navigation" className="film-desktop-nav">{navItems.slice(0,5).map(([id,label])=><a key={id} href={`#${id}`}>{label}</a>)}</nav>
       <a href="#contact" className="film-header-cta">Let’s connect <Arrow/></a>
@@ -131,9 +198,9 @@ export default function CinematicPortfolio() {
         <div className="intro-message"><span className="intro-rule"/><h2 id="opening-title">Every journey<br/>starts with<br/><em>a decision.</em></h2><span>OPENING A BIGGER TOMORROW</span></div>
         <a className="skip-intro" href="#hero">Begin the journey <span aria-hidden="true">↓</span></a>
       </section>
-      <section id="hero" className="film-hero film-scene" data-tone="light" data-chapter="01 — A life in motion">
+      <section id="hero" className="film-hero film-scene" data-tone="light" data-chapter="00 — A life in motion">
         <div className="hero-background"><Image src="/cinematic/qatar.webp" fill priority sizes="100vw" alt=""/></div>
-        <div className="hero-editorial"><p className="film-kicker">ENTREPRENEUR · AUTOMOTIVE LEADER · GLOBAL VISIONARY</p><h1 id="hero-title" tabIndex={-1} className="hero-name"><span>Mohammed</span><span>Rizwan</span></h1><div className="hero-bottom"><p>Building businesses. Solving real problems.<br/>Creating global impact.</p><div className="film-actions"><a href="#journey" className="film-button">Explore the journey <Arrow/></a><a href="#yalaride" className="film-text-button">Discover YalaRide <Arrow/></a></div><div className="hero-facts"><div><strong>30<span>+</span></strong><small>Years in the USA</small></div><div><strong>6</strong><small>Business chapters</small></div><div><strong>1</strong><small>Global vision</small></div></div></div></div>
+        <div className="hero-editorial"><p className="film-kicker">ENTREPRENEUR · AUTOMOTIVE LEADER · GLOBAL VISIONARY</p><h1 id="hero-title" tabIndex={-1} className="hero-name"><span>Mohammed</span><span>Rizwan</span></h1><div className="hero-bottom"><p>Building businesses. Solving real problems.<br/>Creating global impact.</p><div className="film-actions"><a href="#journey" className="film-button">Explore the journey <Arrow/></a><a href="#yalaride" className="film-text-button">Discover YalaRide <Arrow/></a></div><div className="hero-facts"><div><strong>30<span>+</span></strong><small>Years in the USA</small></div><div><strong>{businessChapters.length}</strong><small>Built ventures</small></div><div><strong>1</strong><small>Global vision</small></div></div></div></div>
         <div className="hero-portrait"><Image src="/portrait.png" width={1024} height={1536} alt="Mohammed Rizwan, CEO and Founder of YalaRide" priority sizes="(min-width: 1000px) 57vw, 100vw"/></div>
         <p className="hero-margin-note">People.<br/>Mobility.<br/><em>A better<br/>tomorrow.</em></p>
         <a className="film-scroll" href="#journey"><span className="scroll-line"/>Scroll to explore</a>
@@ -141,39 +208,61 @@ export default function CinematicPortfolio() {
       </section>
       </div>
       <div id="journey" className="journey-film">
-        {journeyScenes.map((scene,i)=><section key={scene.id} id={scene.id} className={`journey-scene film-scene journey-${scene.id}`} data-tone={i===1?'dark':'light'} data-chapter={`02.${scene.number} — ${scene.country}`}>
+        {journeyScenes.map((scene,i)=><section key={scene.id} id={scene.id} className={`journey-scene film-scene journey-${scene.id}`} data-tone={i===1?'dark':'light'} data-chapter={`01.${scene.number} — ${scene.country}`}>
           <div className="journey-image"><Image className="scene-photo" src={scene.image} fill sizes="(min-width: 1000px) 75vw, 100vw" alt={scene.alt}/></div><div className="journey-shade"/>
-          <div className="journey-copy"><p className="film-kicker country-label"><Image src={`/flags/${scene.id}.svg`} width={36} height={24} alt={`${scene.country} flag`}/><span>{scene.number} / {scene.note}</span></p>{i===0&&<p className="journey-prologue">From Pakistan<br/>to a global vision.</p>}<h2 className="country-name">{scene.country}</h2><h3>{scene.title}</h3><p className="scene-body">{scene.copy}</p><div className="journey-coordinate"><span>{i===0?'PAKISTAN → QATAR':i===1?'QATAR → UNITED STATES':'EXPERIENCE → ENTERPRISE'}</span><span aria-hidden="true">↗</span></div></div>
-          <span className="photo-credit">{scene.credit}</span><span className="journey-order">0{i+1} <span>/ 03</span></span>
+          <div className="journey-copy"><p className="film-kicker country-label"><Image src={`/flags/${scene.id}.svg`} width={36} height={24} alt={`${scene.country} flag`}/><span>{scene.number} / {scene.note}</span></p>{i===0&&<p className="journey-prologue">Chapter 01<br/>From Pakistan<br/>to a global vision.</p>}<h2 className="country-name">{scene.country}</h2><h3>{scene.title}</h3><p className="scene-body">{scene.copy}</p><div className="journey-coordinate"><span>{i===0?'PAKISTAN → QATAR':i===1?'QATAR → UNITED STATES':'EXPERIENCE → ENTERPRISE'}</span><span aria-hidden="true">↗</span></div></div>
+          <span className="journey-order">0{i+1} <span>/ 03</span></span>
         </section>)}
       </div>
-      <section id="businesses" className="business-overture film-scene" data-tone="dark" data-chapter="03 — Built through experience">
+      <section id="businesses" className="business-overture film-scene" data-tone="dark" data-chapter="02 — Built through experience">
         <div className="overture-image"><Image src="/cinematic/automotive-intro.webp" fill sizes="100vw" className="scene-photo" alt="Automotive travel scene from YalaRide’s supplied visual assets"/></div><div className="overture-shade"/>
-        <div className="overture-content"><p className="film-kicker">03 / A LIFE OF BUILDING</p><h2 className="scene-title">Built<br/>through<br/><em>experience.</em></h2><p>From the workshop floor to a global marketplace.<br/>Every business, a lesson. Every lesson, a step forward.</p><a className="film-text-button" href="#cars-compound">Enter the business chapters <span aria-hidden="true">↓</span></a></div><span className="overture-side">AUTOMOTIVE / RENTALS / ENTERPRISE / MOBILITY</span>
+        <div className="overture-content"><p className="film-kicker">02 / BUILT THROUGH EXPERIENCE</p><h2 className="scene-title">Built<br/>through<br/><em>experience.</em></h2><p>From the workshop floor to travel desks and global mobility.<br/>Every venture, a lesson. Every lesson, a step forward.</p><a className="film-text-button" href="#cars-compound">Enter the next chapter <span aria-hidden="true">↓</span></a></div><span className="overture-side">AUTOMOTIVE · RENTALS · PARTS · TRAVEL</span>
       </section>
-      {businessChapters.map((chapter,chapterIndex)=><section key={chapter.id} id={chapter.id} className={`business-chapter film-scene business-${chapter.style}${chapterIndex%2===1?' business-flip':''}`} data-tone={chapter.style==='travel'?'light':'dark'} data-chapter={`03.${chapter.number} — ${chapter.title.join(' ')}`}>
+      {businessChapters.map((chapter,chapterIndex)=><section key={chapter.id} id={chapter.id} className={`business-chapter film-scene business-${chapter.style}${chapterIndex%2===1?' business-flip':''}`} data-tone={chapter.style==='travel'?'light':'dark'} data-chapter={`02.${chapter.number} — ${chapter.title.join(' ')}`}>
         <div className="business-image"><Image src={chapter.image} fill className="scene-photo" sizes="(min-width: 1000px) 90vw, 100vw" alt={chapter.alt}/></div><div className="business-shade"/>
-        <div className="business-topline"><span>BUSINESS CHAPTER / {chapter.number}</span><span>{chapter.location}</span></div>
-        <div className="scene-copy"><p className="business-category"><span>{chapter.number}</span><i/>{chapter.category}</p><h2 className="scene-title">{chapter.title.map(line=><span key={line}>{line}</span>)}</h2><p className="business-lead">{chapter.lead}</p><p className="scene-body">{chapter.copy}</p><details className="chapter-story" onToggle={()=>ScrollTrigger.refresh()}><summary>Explore the story <span aria-hidden="true">+</span></summary><div data-lenis-prevent><p>{chapter.detail}</p><p><strong>His connection</strong><br/>{chapter.role}</p>{'url' in chapter&&<a href={chapter.url} target="_blank" rel="noreferrer">Visit {chapter.title.join(' ')} <Arrow/></a>}</div></details></div>
+        <div className="business-topline"><span className="business-topline-chapter">CHAPTER 02 / {chapter.number}</span><span className="business-topline-location">{chapter.location}</span></div>
+        <div className="scene-copy"><p className="business-category"><span>{chapter.number}</span><i/>{chapter.category}</p><h2 className="scene-title">{chapter.title.map(line=><span key={line}>{line}</span>)}</h2><p className="business-lead">{chapter.lead}</p><p className="scene-body">{chapter.copy}</p><button type="button" className="chapter-story-trigger" onClick={()=>setActiveStory(chapter)}>Explore the story <span aria-hidden="true">+</span></button></div>
         <div className="business-signature" aria-hidden="true">{chapter.signature.map(line=><span key={line}>{line}</span>)}</div><div className="business-footline">{chapter.highlights.map(text=><span key={text}>{text}</span>)}</div>
       </section>)}
-      <section id="yalaride" className="technology-scene film-scene" data-tone="light" data-chapter="04 — YalaRide">
-        <div className="technology-map" aria-hidden="true"/><div className="technology-topline"><span className="film-kicker">06 / THE SIGNATURE CHAPTER</span><span>EXPERIENCE, REIMAGINED.</span></div>
-        <div className="technology-copy scene-copy"><p className="business-category"><span>06</span><i/>A GLOBAL CAR-RENTAL MARKETPLACE</p><h2 className="technology-wordmark">YalaRide</h2><h3>Decades of experience.<br/><em>One global vision.</em></h3><p className="scene-body">YalaRide brings together renters and rental businesses through one marketplace — turning first-hand industry knowledge into more accessible, convenient mobility.</p><p className="technology-build">Approximately eighteen months of focused development. Decades of experience behind it.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button">Explore YalaRide <Arrow/></a></div>
-        <div className="device-stage"><div className="device-composition device-composition--photo"><Image src="/cinematic/yalaride-mobile.png" width={356} height={698} alt="YalaRide mobile website" sizes="(min-width: 1000px) 30vw, 70vw" priority/></div><p className="device-caption">THE REAL PLATFORM / YALARIDE.COM</p></div>
+      <section id="yalaride" className="technology-scene film-scene" data-tone="light" data-chapter="03 — YalaRide">
+        <div className="technology-map" aria-hidden="true"/>
+        <div className="technology-intro">
+          <p className="film-kicker technology-chapter-label">03 / THE SIGNATURE CHAPTER</p>
+          <p className="technology-category">A GLOBAL CAR-RENTAL MARKETPLACE</p>
+          <p className="technology-eyebrow">EXPERIENCE, REIMAGINED.</p>
+        </div>
+        <div className="technology-copy scene-copy"><h2 className="technology-wordmark">YalaRide</h2><h3>Decades of experience.<br/><em>One global vision.</em></h3><p className="scene-body">YalaRide brings together renters and rental businesses through one marketplace — turning first-hand industry knowledge into more accessible, convenient mobility.</p><p className="technology-build">Approximately eighteen months of focused development. Decades of experience behind it.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button">Explore YalaRide <Arrow/></a></div>
+        <div className="device-stage"><div className="device-composition device-composition--phone"><div className="device-screen"><Image src="/cinematic/yalaride-mobile.png" width={822} height={1600} alt="YalaRide mobile website" sizes="(min-width: 1000px) 28vw, 55vw" priority/></div></div><p className="device-caption">THE REAL PLATFORM / YALARIDE.COM</p></div>
         <div className="marketplace-relation"><div><span>01</span><strong>Renters</strong><small>Choice & convenience</small></div><i aria-hidden="true">↔</i><div><span>THE CONNECTION</span><strong>YalaRide</strong></div><i aria-hidden="true">↔</i><div><span>02</span><strong>Rental businesses</strong><small>Visibility & opportunity</small></div></div>
       </section>
-      <section id="leadership" className="leadership-scene film-scene" data-tone="light" data-chapter="05 — The principles">
-        <p className="film-kicker leadership-label">05 / THE PERSON BEHIND THE VISION</p><div className="leadership-values"><h2>Hard work<br/><em>Trust</em><br/>Accountability<br/>Innovation<br/>Adaptability</h2></div><div className="leadership-portrait"><Image src="/portrait.png" width={1024} height={1536} alt="Mohammed Rizwan" sizes="(min-width: 1000px) 50vw, 85vw"/></div><div className="leadership-quote"><blockquote>“{QUOTE_PRIMARY}”</blockquote><p>— MOHAMMED RIZWAN</p><span>Staying close to the customer,<br/>the team and the work itself.</span></div><span className="leadership-signature">People.<br/>Purpose.<br/>Progress.</span>
+      <section id="leadership" className="leadership-scene film-scene" data-tone="light" data-chapter="04 — The principles">
+        <p className="film-kicker leadership-label">04 / THE PERSON BEHIND THE VISION</p><div className="leadership-values"><h2>Hard work<br/><em>Trust</em><br/>Accountability<br/>Innovation<br/>Adaptability</h2></div><div className="leadership-portrait"><Image src="/portrait.png" width={1024} height={1536} alt="Mohammed Rizwan" sizes="(min-width: 1000px) 50vw, 85vw"/></div><div className="leadership-quote"><blockquote>“{QUOTE_PRIMARY}”</blockquote><p>— MOHAMMED RIZWAN</p><span>Staying close to the customer,<br/>the team and the work itself.</span></div><span className="leadership-signature">People.<br/>Purpose.<br/>Progress.</span>
       </section>
-      <section id="vision" className="global-scene film-scene" data-tone="dark" data-chapter="06 — The global ambition">
-        <div ref={globe} className="global-earth" aria-hidden="true">{globeReady?<GlobalEarth/>:<div className="earth-fallback"/>}</div><div className="global-copy"><p className="film-kicker">06 / THE NEXT HORIZON</p><h2>A more<br/><em>connected</em><br/>world.</h2><p>From local operations to a global platform. The ambition is to make mobility more accessible and create better opportunities for rental businesses worldwide.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button film-button-outline">Explore the vision <Arrow/></a></div><div className="global-baseline"><span>GROUNDED IN EXPERIENCE.</span><span>LOOKING TOWARD POSSIBILITY.</span></div>
+      <section id="vision" className="global-scene film-scene" data-tone="dark" data-chapter="05 — The global ambition">
+        <div ref={globe} className="global-earth" aria-hidden="true">{globeReady?<GlobalEarth/>:<div className="earth-fallback"/>}</div><div className="global-copy"><p className="film-kicker">05 / THE NEXT HORIZON</p><h2>A more<br/><em>connected</em><br/>world.</h2><p>From local operations to a global platform. The ambition is to make mobility more accessible and create better opportunities for rental businesses worldwide.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button film-button-outline">Explore the vision <Arrow/></a></div><div className="global-baseline"><span>GROUNDED IN EXPERIENCE.</span><span>LOOKING TOWARD POSSIBILITY.</span></div>
       </section>
-      <section id="contact" className="finale-scene" data-tone="light" data-chapter="07 — The journey continues">
-        <p className="film-kicker">07 / ALWAYS MOVING FORWARD</p><h2>The journey<br/><em>continues.</em></h2><p className="finale-invitation">Let’s build what’s next.</p><a href={`mailto:${BRAND.email}`} className="film-button">Get in touch <Arrow/></a><div className="finale-contacts"><div><small>EMAIL</small><a href={`mailto:${BRAND.email}`}>{BRAND.email}</a></div><div><small>PHONE</small><a href="tel:+14075906100">{BRAND.phone}</a></div><div><small>OPEN FOR</small><p>Business, partnerships & media enquiries</p></div></div>
+      <section id="contact" className="finale-scene" data-tone="light" data-chapter="06 — The journey continues">
+        <p className="film-kicker">06 / ALWAYS MOVING FORWARD</p><h2>The journey<br/><em>continues.</em></h2><p className="finale-invitation">Let’s build what’s next.</p><a href={`mailto:${BRAND.email}`} className="film-button">Get in touch <Arrow/></a><div className="finale-contacts"><div><small>EMAIL</small><a href={`mailto:${BRAND.email}`}>{BRAND.email}</a></div><div><small>PHONE</small><a href="tel:+14075906100">{BRAND.phone}</a></div><div><small>OPEN FOR</small><p>Business, partnerships & media enquiries</p></div></div>
       </section>
     </main>
-    <footer className="film-footer"><a href="#hero" className="film-brand"><Image src="/brand-mark.svg" alt="Mohammed Rizwan" width={46} height={34}/><span>A LIFE IN MOTION.</span></a><p>© {BRAND.year} Mohammed Rizwan</p><details className="image-credits"><summary>Image credits</summary><div><p>Country and travel images are editorial illustrations, not personal archival photographs.</p><a href="https://commons.wikimedia.org/wiki/File:Sunset_at_Badshahi_Mosque_Lahore.jpg" target="_blank" rel="noreferrer">Pakistan — MuhammadYassal</a><a href="https://commons.wikimedia.org/wiki/File:Doha_West_Bay_Skyline_Qatar_Jan_2020.jpg" target="_blank" rel="noreferrer">Qatar — Thameur Belghith</a><a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">Both CC BY-SA 4.0; resized and visually cropped.</a><a href="https://commons.wikimedia.org/wiki/File:Liberty_enlightening_the_world.JPG" target="_blank" rel="noreferrer">United States — Ypsilonatshared / Public domain</a><a href="https://unsplash.com/photos/fV_qtB_sTV8" target="_blank" rel="noreferrer">Travel — Marcreation / Unsplash</a><p>Earth texture: Three.js example asset. Business imagery and portrait: supplied project assets. Product screen: YalaRide.com.</p></div></details><a href="#opening">Return to opening ↑</a></footer>
+    <footer className="film-footer"><a href="#hero" className="film-brand"><Image src="/brand-mark.svg" alt="Mohammed Rizwan" width={46} height={34}/><span>A LIFE IN MOTION.</span></a><p>© {BRAND.year} Mohammed Rizwan</p><a href="#opening">Return to opening ↑</a></footer>
     <div className="film-chapter-indicator" aria-hidden="true"><span ref={activeChapter}>01 — A life in motion</span></div>
+    {portalReady && activeStory && createPortal(
+      <div className="story-modal" role="dialog" aria-modal="true" aria-labelledby="story-modal-title">
+        <button type="button" className="story-modal-backdrop" aria-label="Close story" onClick={()=>setActiveStory(null)}/>
+        <div className="story-modal-card">
+          <div className="story-modal-head">
+            <p className="film-kicker" id="story-modal-title">{activeStory.number} / {activeStory.title.join(' ')}</p>
+            <button type="button" className="story-modal-close" aria-label="Close" onClick={()=>setActiveStory(null)}>×</button>
+          </div>
+          <p>{activeStory.detail}</p>
+          <p><strong>His connection</strong><br/>{activeStory.role}</p>
+          {'url' in activeStory && activeStory.url && (
+            <a href={activeStory.url} target="_blank" rel="noreferrer" className="story-modal-link">Visit {activeStory.title.join(' ')} <Arrow/></a>
+          )}
+        </div>
+      </div>,
+      document.body
+    )}
   </div>;
 }
