@@ -3,14 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BRAND, QUOTE_PRIMARY } from '@/lib/data';
 import { journeyScenes, businessChapters } from './story';
 import './cinematic.css';
 
-const GlobalEarth = dynamic(() => import('./GlobalEarth'), { ssr: false, loading: () => <div className="earth-fallback"/> });
 const navItems = [['opening','Home'],['journey','Journey'],['businesses','Businesses'],['yalaride','YalaRide'],['leadership','Leadership'],['contact','Contact']] as const;
 const Arrow = () => <span aria-hidden="true">↗</span>;
 type BusinessChapter = (typeof businessChapters)[number];
@@ -23,9 +21,7 @@ export default function CinematicPortfolio() {
   const menuPanel = useRef<HTMLElement>(null);
   const progress = useRef<HTMLSpanElement>(null);
   const activeChapter = useRef<HTMLSpanElement>(null);
-  const globe = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [globeReady, setGlobeReady] = useState(false);
   const [activeStory, setActiveStory] = useState<BusinessChapter | null>(null);
   const [portalReady, setPortalReady] = useState(false);
 
@@ -155,16 +151,8 @@ export default function CinematicPortfolio() {
     const schedule=()=>{if(!raf)raf=requestAnimationFrame(update);};
     const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){const scene=entry.target as HTMLElement;if(header.current)header.current.dataset.tone=scene.dataset.tone||'light';if(activeChapter.current)activeChapter.current.textContent=scene.dataset.chapter||'A life in motion';}});},{rootMargin:'-15% 0px -70% 0px'});
     document.querySelectorAll('[data-chapter]').forEach(scene=>observer.observe(scene));
-    const globeObserver=new IntersectionObserver(entries=>{
-      if(entries.some(x=>x.isIntersecting)){
-        const can3d=innerWidth>=1000&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if(can3d)setGlobeReady(true);
-        globeObserver.disconnect();
-      }
-    },{rootMargin:'800px'});
-    if(globe.current)globeObserver.observe(globe.current);
     addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule);update();
-    return()=>{cancelAnimationFrame(raf);removeEventListener('scroll',schedule);removeEventListener('resize',schedule);observer.disconnect();globeObserver.disconnect();};
+    return()=>{cancelAnimationFrame(raf);removeEventListener('scroll',schedule);removeEventListener('resize',schedule);observer.disconnect();};
   },[]);
 
   useEffect(()=>{
@@ -238,7 +226,7 @@ export default function CinematicPortfolio() {
         <p className="film-kicker leadership-label">04 / THE PERSON BEHIND THE VISION</p><div className="leadership-values"><h2>Hard work<br/><em>Trust</em><br/>Accountability<br/>Innovation<br/>Adaptability</h2></div><div className="leadership-portrait"><Image src="/portrait.png" width={1024} height={1536} alt="Mohammed Rizwan" sizes="(min-width: 1000px) 50vw, 85vw"/></div><div className="leadership-quote"><blockquote>“{QUOTE_PRIMARY}”</blockquote><p>— MOHAMMED RIZWAN</p><span>Staying close to the customer,<br/>the team and the work itself.</span></div><span className="leadership-signature">People.<br/>Purpose.<br/>Progress.</span>
       </section>
       <section id="vision" className="global-scene film-scene" data-tone="dark" data-chapter="05 — The global ambition">
-        <div ref={globe} className="global-earth" aria-hidden="true">{globeReady?<GlobalEarth/>:<div className="earth-fallback"/>}</div><div className="global-copy"><p className="film-kicker">05 / THE NEXT HORIZON</p><h2>A more<br/><em>connected</em><br/>world.</h2><p>From local operations to a global platform. The ambition is to make mobility more accessible and create better opportunities for rental businesses worldwide.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button film-button-outline">Explore the vision <Arrow/></a></div><div className="global-baseline"><span>GROUNDED IN EXPERIENCE.</span><span>LOOKING TOWARD POSSIBILITY.</span></div>
+        <div className="global-earth" aria-hidden="true"><div className="earth-fallback"/></div><div className="global-copy"><p className="film-kicker">05 / THE NEXT HORIZON</p><h2>A more<br/><em>connected</em><br/>world.</h2><p>From local operations to a global platform. The ambition is to make mobility more accessible and create better opportunities for rental businesses worldwide.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button film-button-outline">Explore the vision <Arrow/></a></div><div className="global-baseline"><span>GROUNDED IN EXPERIENCE.</span><span>LOOKING TOWARD POSSIBILITY.</span></div>
       </section>
       <section id="contact" className="finale-scene" data-tone="light" data-chapter="06 — The journey continues">
         <p className="film-kicker">06 / ALWAYS MOVING FORWARD</p><h2>The journey<br/><em>continues.</em></h2><p className="finale-invitation">Let’s build what’s next.</p><a href={`mailto:${BRAND.email}`} className="film-button">Get in touch <Arrow/></a><div className="finale-contacts"><div><small>EMAIL</small><a href={`mailto:${BRAND.email}`}>{BRAND.email}</a></div><div><small>PHONE</small><a href="tel:+14075906100">{BRAND.phone}</a></div><div><small>OPEN FOR</small><p>Business, partnerships & media enquiries</p></div></div>
