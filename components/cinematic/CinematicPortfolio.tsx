@@ -127,7 +127,6 @@ export default function CinematicPortfolio() {
         gsap.fromTo('.leadership-values h2, .leadership-quote, .leadership-label',{y:30,opacity:0},{y:0,opacity:1,stagger:.12,duration:.85,ease:'power3.out',scrollTrigger:{trigger:'.leadership-scene',start:'top 82%',once:true}});
         gsap.fromTo('.leadership-portrait',{y:40,scale:1.06,opacity:.5},{y:0,scale:1,opacity:1,ease:'none',scrollTrigger:{trigger:'.leadership-scene',start:'top 85%',end:'top 25%',scrub:.8}});
         gsap.fromTo('.global-copy > *',{y:28,opacity:0},{y:0,opacity:1,stagger:.1,duration:.8,ease:'power3.out',scrollTrigger:{trigger:'.global-scene',start:'top 85%',once:true}});
-        gsap.fromTo('.global-earth',{scale:1.12,opacity:.4},{scale:1,opacity:1,ease:'none',scrollTrigger:{trigger:'.global-scene',start:'top 90%',end:'top 40%',scrub:.7}});
         gsap.fromTo('.finale-scene > *',{y:26,opacity:0},{y:0,opacity:1,stagger:.09,duration:.8,ease:'power3.out',scrollTrigger:{trigger:'.finale-scene',start:'top 85%',once:true}});
       });
     },el);
