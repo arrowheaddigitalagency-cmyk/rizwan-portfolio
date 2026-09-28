@@ -72,19 +72,24 @@ export default function CinematicPortfolio() {
           if(photo)tl.fromTo(photo,{scale:1.14},{scale:1.08,duration:1,ease:'none'},0);
           tl.to(scene.querySelector('.country-name'),{yPercent:-10,duration:1,ease:'none'},0);
         });
-        gsap.utils.toArray<HTMLElement>('.business-chapter, .business-overture').forEach((scene,i) => {
+        const businessScenes=gsap.utils.toArray<HTMLElement>('.business-chapter, .business-overture');
+        const addBusinessMotion=(scene:HTMLElement,i:number) => {
           const photo=scene.querySelector('.scene-photo');
           const title=scene.querySelector('.scene-title');
-          const tl=gsap.timeline({scrollTrigger:{trigger:scene,start:'top top',end:scene.classList.contains('business-travel')?'+=35%':i===0?'+=45%':'+=55%',pin:true,scrub:.85,anticipatePin:1}});
+          const pinEnd=scene.classList.contains('business-travel')?'+=35%':(i===0||scene.id==='rizitech')?'+=45%':'+=55%';
+          const tl=gsap.timeline({scrollTrigger:{trigger:scene,start:'top top',end:pinEnd,pin:true,pinSpacing:true,scrub:.85,anticipatePin:1,invalidateOnRefresh:true}});
           // Full-bleed chapters: gentle Ken Burns only, never shrink below cover
           if(photo)tl.fromTo(photo,{scale:1.08},{scale:1.04,duration:1,ease:'none'},0);
           if(title)tl.fromTo(title,{yPercent:3},{yPercent:-3,duration:1,ease:'none'},0);
           if(title)gsap.fromTo(title,{clipPath:'inset(100% 0% 0% 0%)'},{clipPath:'inset(0% 0% 0% 0%)',ease:'none',scrollTrigger:{trigger:scene,start:'top 85%',end:'top 20%',scrub:.5}});
-        });
-        const technology=gsap.timeline({scrollTrigger:{trigger:'.technology-scene',start:'top top',end:'+=75%',pin:true,scrub:1,anticipatePin:1}});
+        };
+        businessScenes.forEach((scene,i)=>{if(scene.id!=='rizitech')addBusinessMotion(scene,i);});
+        const technology=gsap.timeline({scrollTrigger:{trigger:'.technology-scene',start:'top top',end:'+=45%',pin:true,pinSpacing:true,scrub:.85,anticipatePin:1,invalidateOnRefresh:true}});
         technology.fromTo('.device-composition--phone',{y:28,scale:.96,opacity:.7},{y:0,scale:1,opacity:1,duration:.75,ease:'none'},0)
           .fromTo('.technology-wordmark',{xPercent:5},{xPercent:0,opacity:1,duration:.8},0)
           .fromTo('.marketplace-relation',{y:25},{y:0,opacity:1,duration:.4},.45);
+        const rizitechIndex=businessScenes.findIndex(scene=>scene.id==='rizitech');
+        if(rizitechIndex>=0)addBusinessMotion(businessScenes[rizitechIndex],rizitechIndex);
         gsap.to('.leadership-portrait',{yPercent:-4,ease:'none',scrollTrigger:{trigger:'.leadership-scene',start:'top bottom',end:'bottom top',scrub:1}});
       });
       mm.add('(max-width: 999px) and (prefers-reduced-motion: no-preference)', () => {
@@ -197,7 +202,7 @@ export default function CinematicPortfolio() {
       <div id="journey" className="journey-film">
         {journeyScenes.map((scene,i)=><section key={scene.id} id={scene.id} className={`journey-scene film-scene journey-${scene.id}`} data-tone={i===1?'dark':'light'} data-chapter={`01.${scene.number} — ${scene.country}`}>
           <div className="journey-image"><Image className="scene-photo" src={scene.image} fill sizes="(min-width: 1000px) 75vw, 100vw" alt={scene.alt}/></div><div className="journey-shade"/>
-          <div className="journey-copy"><p className="film-kicker country-label"><Image src={`/flags/${scene.id}.svg`} width={36} height={24} alt={`${scene.country} flag`}/><span>{scene.number} / {scene.note}</span></p>{i===0&&<p className="journey-prologue">Chapter 01<br/>From Pakistan<br/>to a global vision.</p>}<h2 className="country-name">{scene.country}</h2><h3>{scene.title}</h3><p className="scene-body">{scene.copy}</p><div className="journey-coordinate"><span>{i===0?'PAKISTAN → QATAR':i===1?'QATAR → UNITED STATES':'EXPERIENCE → ENTERPRISE'}</span><span aria-hidden="true">↗</span></div></div>
+          <div className="journey-copy"><p className="film-kicker country-label"><Image src={`/flags/${scene.id}.svg`} width={36} height={24} alt={`${scene.country} flag`}/><span>{scene.number} / {scene.note}</span></p>{i===0&&<p className="journey-prologue">Chapter 01<br/>From Pakistan<br/>to a global vision.</p>}<h2 className="country-name">{scene.country}</h2><h3>{scene.title}</h3><p className="scene-body">{scene.copy}</p><div className="journey-coordinate"><span>{scene.route}</span><span aria-hidden="true">↗</span></div></div>
           <span className="journey-order">0{i+1} <span>/ 03</span></span>
         </section>)}
       </div>
@@ -205,23 +210,29 @@ export default function CinematicPortfolio() {
         <div className="overture-image"><Image src="/cinematic/automotive-intro.webp" fill sizes="100vw" className="scene-photo" alt="Automotive travel scene from YalaRide’s supplied visual assets"/></div><div className="overture-shade"/>
         <div className="overture-content"><p className="film-kicker">02 / BUILT THROUGH EXPERIENCE</p><h2 className="scene-title">Built<br/>through<br/><em>experience.</em></h2><p>From the workshop floor to travel desks and global mobility.<br/>Every venture, a lesson. Every lesson, a step forward.</p><a className="film-text-button" href="#cars-compound">Enter the next chapter <span aria-hidden="true">↓</span></a></div><span className="overture-side">AUTOMOTIVE · RENTALS · PARTS · TRAVEL</span>
       </section>
-      {businessChapters.map((chapter,chapterIndex)=><section key={chapter.id} id={chapter.id} className={`business-chapter film-scene business-${chapter.style}${chapterIndex%2===1?' business-flip':''}`} data-tone={chapter.style==='travel'?'light':'dark'} data-chapter={`02.${chapter.number} — ${chapter.title.join(' ')}`}>
+      {businessChapters.filter(chapter=>chapter.id!=='yalaride'&&chapter.id!=='rizitech').map((chapter,chapterIndex)=><section key={chapter.id} id={chapter.id} className={`business-chapter film-scene business-${chapter.style}${chapterIndex%2===1?' business-flip':''}`} data-tone={chapter.style==='travel'?'light':'dark'} data-chapter={`02.${chapter.number} — ${chapter.title.join(' ')}`}>
         <div className="business-image"><Image src={chapter.image} fill className="scene-photo" sizes="(min-width: 1000px) 90vw, 100vw" alt={chapter.alt}/></div><div className="business-shade"/>
         <div className="business-topline"><span className="business-topline-chapter">CHAPTER 02 / {chapter.number}</span><span className="business-topline-location">{chapter.location}</span></div>
         <div className="scene-copy"><p className="business-category"><span>{chapter.number}</span><i/>{chapter.category}</p><h2 className="scene-title">{chapter.title.map(line=><span key={line}>{line}</span>)}</h2><p className="business-lead">{chapter.lead}</p><p className="scene-body">{chapter.copy}</p><button type="button" className="chapter-story-trigger" onClick={()=>setActiveStory(chapter)}>Explore the story <span aria-hidden="true">+</span></button></div>
         <div className="business-signature" aria-hidden="true">{chapter.signature.map(line=><span key={line}>{line}</span>)}</div><div className="business-footline">{chapter.highlights.map(text=><span key={text}>{text}</span>)}</div>
       </section>)}
-      <section id="yalaride" className="technology-scene film-scene" data-tone="light" data-chapter="03 — YalaRide">
+      <section id="yalaride" className="technology-scene film-scene" data-tone="light" data-chapter="02.06 — YalaRide">
         <div className="technology-map" aria-hidden="true"/>
         <div className="technology-intro">
-          <p className="film-kicker technology-chapter-label">03 / THE SIGNATURE CHAPTER</p>
+          <p className="film-kicker technology-chapter-label">02.06 / THE SIGNATURE CHAPTER</p>
           <p className="technology-category">A GLOBAL CAR-RENTAL MARKETPLACE</p>
-          <p className="technology-eyebrow">EXPERIENCE, REIMAGINED.</p>
+          <p className="technology-eyebrow">CHOICE FOR RENTERS. CONTROL FOR PARTNERS.</p>
         </div>
-        <div className="technology-copy scene-copy"><h2 className="technology-wordmark">YalaRide</h2><h3>Decades of experience.<br/><em>One global vision.</em></h3><p className="scene-body">YalaRide brings together renters and rental businesses through one marketplace — turning first-hand industry knowledge into more accessible, convenient mobility.</p><p className="technology-build">Approximately eighteen months of focused development. Decades of experience behind it.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button">Explore YalaRide <Arrow/></a></div>
+        <div className="technology-copy scene-copy"><h2 className="technology-wordmark">YalaRide</h2><h3>A more affordable,<br/><em>flexible alternative.</em></h3><p className="scene-body">YalaRide.com connects customers directly with independent and franchise car-rental operators around the world.</p><p className="technology-build">Rental partners get competitive commissions and more control over inventory, pricing and services. Flexible pricing, protection options, extra services and technology integrations are in development.</p><a href={BRAND.yala} target="_blank" rel="noreferrer" className="film-button">Explore YalaRide <Arrow/></a></div>
         <div className="device-stage"><div className="device-composition device-composition--phone"><div className="device-screen"><Image src="/cinematic/yalaride-mobile.png" width={822} height={1600} alt="YalaRide mobile website" sizes="(min-width: 1000px) 28vw, 55vw" priority/></div></div><p className="device-caption">THE REAL PLATFORM / YALARIDE.COM</p></div>
         <div className="marketplace-relation"><div><span>01</span><strong>Renters</strong><small>Choice & convenience</small></div><i aria-hidden="true">↔</i><div><span>THE CONNECTION</span><strong>YalaRide</strong></div><i aria-hidden="true">↔</i><div><span>02</span><strong>Rental businesses</strong><small>Visibility & opportunity</small></div></div>
       </section>
+      {businessChapters.filter(chapter=>chapter.id==='rizitech').map(chapter=><section key={chapter.id} id={chapter.id} className="business-chapter film-scene business-workshop" data-tone="dark" data-chapter={`02.${chapter.number} — ${chapter.title.join(' ')}`}>
+        <div className="business-image"><Image src={chapter.image} fill className="scene-photo" sizes="(min-width: 1000px) 90vw, 100vw" alt={chapter.alt}/></div><div className="business-shade"/>
+        <div className="business-topline"><span className="business-topline-chapter">CHAPTER 02 / {chapter.number}</span><span className="business-topline-location">{chapter.location}</span></div>
+        <div className="scene-copy"><p className="business-category"><span>{chapter.number}</span><i/>{chapter.category}</p><h2 className="scene-title">{chapter.title.map(line=><span key={line}>{line}</span>)}</h2><p className="business-lead">{chapter.lead}</p><p className="scene-body">{chapter.copy}</p><button type="button" className="chapter-story-trigger" onClick={()=>setActiveStory(chapter)}>Explore the story <span aria-hidden="true">+</span></button></div>
+        <div className="business-signature" aria-hidden="true">{chapter.signature.map(line=><span key={line}>{line}</span>)}</div><div className="business-footline">{chapter.highlights.map(text=><span key={text}>{text}</span>)}</div>
+      </section>)}
       <section id="leadership" className="leadership-scene film-scene" data-tone="light" data-chapter="04 — The principles">
         <p className="film-kicker leadership-label">04 / THE PERSON BEHIND THE VISION</p><div className="leadership-values"><h2>Hard work<br/><em>Trust</em><br/>Accountability<br/>Innovation<br/>Adaptability</h2></div><div className="leadership-portrait"><Image src="/portrait.png" width={1024} height={1536} alt="Mohammed Rizwan" sizes="(min-width: 1000px) 50vw, 85vw"/></div><div className="leadership-quote"><blockquote>“{QUOTE_PRIMARY}”</blockquote><p>— MOHAMMED RIZWAN</p><span>Staying close to the customer,<br/>the team and the work itself.</span></div><span className="leadership-signature">People.<br/>Purpose.<br/>Progress.</span>
       </section>
