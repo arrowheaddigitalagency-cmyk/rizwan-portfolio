@@ -242,6 +242,52 @@
   .business-travel .business-signature span { white-space: nowrap; }
 }
 
+/* Keep the GoJetter travel headline inside its signature card at every width. */
+.business-travel .business-signature {
+  width: fit-content !important;
+  max-width: min(42vw, 500px) !important;
+  box-sizing: border-box;
+}
+.business-travel .business-signature span {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.business-chapter#vip-kars .scene-title {
+  font-size: clamp(66px, 10vw, 150px) !important;
+  line-height: .9 !important;
+  letter-spacing: -.05em !important;
+  white-space: nowrap;
+}
+
+.business-chapter#cars-compound .scene-title {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: baseline;
+  gap: 0.22em;
+  max-width: 100%;
+  font-size: clamp(32px, 6.4vw, 128px) !important;
+  line-height: .9 !important;
+  letter-spacing: -.055em !important;
+  white-space: nowrap !important;
+}
+.business-chapter#cars-compound .scene-title span {
+  display: inline-block !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 999px) {
+  .business-chapter#cars-compound .scene-title {
+    font-size: clamp(28px, 8.2vw, 64px) !important;
+    letter-spacing: -.04em !important;
+  }
+}
+@media (max-width: 600px) {
+  .business-chapter#cars-compound .scene-title {
+    font-size: clamp(26px, 9.2vw, 48px) !important;
+    letter-spacing: -.035em !important;
+  }
+}
+
 /* YalaRide: stacked labels never collide + clean upright phone */
 .technology-intro{
   position: absolute;
